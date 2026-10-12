@@ -1,0 +1,23 @@
+# Native PhotoCraft runtime is installed explicitly by scripts/Install-PhotoCraft.ps1.
+# Paths are evaluated on the recipient's machine. No credentials belong here.
+- insert:
+    - id: mcp-photocraft
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: photocraft
+        transport: stdio
+        command: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/runtime/photocraft-cli.exe'
+        args: !!js "['mcp', '--automation-read-root', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace', '--automation-write-root', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace']"
+        cwd: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace'
+        toolCallTimeoutMs: 180000
+        failOnStartupError: true
+    - id: mcp-photocraft-ui
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: photocraft_ui
+        transport: stdio
+        command: !!js process.env.PHOTOCRAFT_DSH_PWSH || 'pwsh'
+        args: !!js "['-NoProfile', '-NonInteractive', '-File', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/scripts/Start-PhotoCraftMcp.ps1', '-Port', process.env.PHOTOCRAFT_DSH_PORT || '17878', '-SafeGpu']"
+        cwd: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace'
+        toolCallTimeoutMs: 180000
+        failOnStartupError: true

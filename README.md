@@ -1,0 +1,125 @@
+# dsh-photocraft
+
+让 DeepSeek Harness（dsh）通过 MCP 使用 **PhotoCraft**：编辑图片、管理图层、调色、添加文字与形状、运行滤镜、保存工程、导出图片，以及操作原生桌面画布和截图。
+
+独立社区集成，非 PhotoCraft 或 DeepSeek 官方插件。不包含编辑器二进制，不包含生成式 AI 模型。
+
+## 支持范围
+
+| 项目 | 本版范围 |
+| --- | --- |
+| 系统 | Windows x64，带可用的桌面会话 |
+| DSH | 实测 `0.2.0-rc.2`，声明兼容 `^0.2.0-rc.2` |
+| PowerShell | **PowerShell 7**，`pwsh` 可在终端运行；不是 Windows PowerShell 5.1 |
+| PhotoCraft | 官方 **0.7.0** Windows x64 便携版，固定版本和 SHA-256 |
+| 桌面渲染 | 默认 `--safe-gpu`，CPU 安全模式 |
+
+macOS、Linux、Windows ARM64 和无桌面会话的服务器尚未验证，本版不声明支持。PhotoCraft 当前源码的 0.8.0 功能不在本版验证范围内。
+
+## 安装
+
+先确认 `dsh --version` 和 `pwsh --version` 能运行。以下命令均在 **PowerShell 7** 中执行。安装方式使用 DSH 官方的 `dsh.bundle` 包机制，与其他 `dsh plugin add` 插件一致。
+
+### 1. 安装插件包
+
+```powershell
+dsh plugin --profile web add github:DASHAN-0079/dsh-photocraft#v0.1.0
+```
+
+### 2. 安装原生 PhotoCraft 运行时
+
+```powershell
+$dshRoot = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+& "$dshRoot/profiles/web/node_modules/dsh-photocraft/scripts/Install-PhotoCraft.ps1"
+```
+
+安装器从 PhotoCraft 官方 GitHub 下载约 77 MB 的便携包，校验固定 SHA-256，再安装到 `%LOCALAPPDATA%\dsh-photocraft`。不需要 Rust、不需要管理员权限，不修改系统 PATH，也不使用 npm 的安装钩子执行下载。安装器会保留已有图片、工程和状态；重复运行会核对运行时文件校验值。
+
+安装完成后重启 dsh，并创建新会话。使用其他 profile 时，将命令里的 `web` 换成相应名称。多个 profile 可以共用一次运行时安装。
+
+**已使用旧版手工配置的用户：** 安装此包前，删除旧配置中 `mcp-photocraft` 与 `mcp-photocraft-ui` 两个条目，保留其他条目，避免重复注册。不需要手工配置的新用户可忽略此项。
+
+### 从源码安装
+
+```powershell
+git clone https://github.com/DASHAN-0079/dsh-photocraft.git
+cd dsh-photocraft
+./scripts/Install-PhotoCraft.ps1
+dsh plugin --profile web add .
+```
+
+官方安装方式参考：[DSH 插件打包与安装](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md)。
+
+## 使用
+
+把待处理图片放进 `%LOCALAPPDATA%\dsh-photocraft\workspace`。插件中的相对路径从该目录开始，输出也保存在这里。
+
+对 dsh 说：
+
+> 使用 PhotoCraft 创建一张 1200×800 的宣传图，背景深蓝，白色标题“周末摄影展”，加入黄色圆形装饰。生成预览，保存 poster.pcraft 和 poster.png。先通过 command_list 确认命令及参数。
+
+或者：
+
+> 用 PhotoCraft 打开 workspace 中的 input.jpg，提高亮度和对比度，缩放到宽度 1600 像素，保持比例，导出 output.jpg，不覆盖原图。
+
+| 工具前缀 | 用途 |
+| --- | --- |
+| `mcp__photocraft__*` | 无界面编辑、保存、批处理、预览、切换和关闭文档 |
+| `mcp__photocraft_ui__*` | 桌面编辑、界面检查、画笔鼠标事件、菜单、截图 |
+
+两个后端拥有**独立文档会话**。要交换文档，先保存，再在另一端打开。桌面入口自动启动本机 PhotoCraft，不会将编辑界面嵌入 dsh 网页。多个客户端共享桌面窗口，请避免同时修改同一文档。断开 MCP 不会关闭桌面，防止丢失未保存的工作。
+
+上游 MCP 在两个模式下都会列出全部工具，但 `ui_*` 和 `control_call` 只能用桌面入口；`doc_select` 和 `doc_close` 只能用无界面入口。桌面标签页操作走 `control_call`。
+
+## 验证
+
+运行完整集成检查（会创建合成测试图片并打开一个桌面测试文档）：
+
+```powershell
+$install = if ($env:PHOTOCRAFT_DSH_HOME) { $env:PHOTOCRAFT_DSH_HOME } else { Join-Path $env:LOCALAPPDATA 'dsh-photocraft' }
+& "$install/scripts/Test-PhotoCraftMcp.ps1" -InstallDir $install
+```
+
+初始本机验证：**21 个 MCP 工具、105 项检查通过，发现 858 条引擎命令**。覆盖图层、填充、调色、模糊、文字、形状、撤销/重做、批量命令、PNG 预览、原生工程、8 种格式导出重开（PNG/JPEG/WebP/TIFF/PSD/PSB/OpenRaster/OpenEXR）、RGB/Gray/CMYK/Lab 的 8/16/32 位保存、后台任务接口、桌面绘制和截图、资源读取、错误命令和越界路径拒绝。实际 dsh 模型会话也已完成新建、填色、保存和桌面状态读取。
+
+报告保存到安装目录的 `validation.json`，预览在 `workspace/headless-preview.png` 和 `workspace/desktop-preview.png`。仓库 CI 运行离线包检查，不声称运行完整桌面测试。
+
+这不是 858 条命令的穷举测试，也不保证复杂 PSD 与 Photoshop 完全一致。生成式填充、AI 扩图等 PhotoCraft 尚未实现的功能不会由本插件补齐。
+
+## 配置与排错
+
+以下环境变量需要在启动 dsh **之前**设置：
+
+| 变量 | 默认值 / 用途 |
+| --- | --- |
+| `PHOTOCRAFT_DSH_HOME` | `%LOCALAPPDATA%/dsh-photocraft`；安装器和插件必须使用同一路径 |
+| `PHOTOCRAFT_DSH_PWSH` | `pwsh`；可指定 PowerShell 7 可执行文件绝对路径 |
+| `PHOTOCRAFT_DSH_PORT` | `17878`；桌面本机控制端口 |
+
+读写权限限定在安装目录的 `workspace` 下。令牌和日志保存在 `state`，不会提交到 GitHub。自定义安装位置时，设置 `PHOTOCRAFT_DSH_HOME` 后再运行安装器，并让启动 dsh 的终端使用同一变量。
+
+- 找不到运行时：先完成安装第 2 步；检查上述变量。
+- 找不到 `pwsh`：安装 PowerShell 7，重新打开终端；或设置 `PHOTOCRAFT_DSH_PWSH`。
+- 端口被占用：关闭旧 PhotoCraft 桥接进程，或设置另一个 `PHOTOCRAFT_DSH_PORT`。测试脚本另提供 `-Port` 参数。
+- 桌面启动失败：查看 `state/app.stderr.log`。本版已使用安全渲染模式，但仍需要可用的 Windows 桌面。
+- 路径拒绝：将图片放入 `workspace`；不要使用 `..` 越界访问。
+- 安装包校验失败：不要跳过校验；删除下载缓存里的损坏 ZIP 后重新下载。
+
+## 卸载
+
+```powershell
+dsh plugin --profile web remove dsh-photocraft
+```
+
+重启 dsh，正常关闭 PhotoCraft。运行时和工作图片会保留；确认不再需要后可手工移除安装目录。插件不会自动删除用户图片。
+
+## 开发与授权
+
+```powershell
+npm test
+npm pack --dry-run
+```
+
+包由 YAML 配置和 PowerShell 脚本组成，不新增 JavaScript/TypeScript 界面。插件采用 MIT 许可证；PhotoCraft 原始便携包的许可证和资源声明随运行时保留。项目不重新分发上游二进制或品牌资产。
+
+[PhotoCraft](https://github.com/storytold/photocraft) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)

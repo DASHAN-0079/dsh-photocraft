@@ -1,0 +1,10 @@
+dsh-photocraft is an independent integration, not an official PhotoCraft or DeepSeek product.
+
+PhotoCraft: https://github.com/storytold/photocraft
+DeepSeek Harness: https://github.com/deepseek-ai/deepseek-harness
+
+The PowerShell MCP bridge and validation scripts were adapted from the local
+PhotoCraft integration. The MIT license notice is retained. No PhotoCraft
+binaries, fonts, brand assets, user files, or credentials are distributed here.
+The optional runtime installer downloads the original upstream portable archive
+and preserves its bundled license files.
