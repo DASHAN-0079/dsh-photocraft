@@ -125,6 +125,7 @@ $install = if ($env:PHOTOCRAFT_DSH_HOME) { $env:PHOTOCRAFT_DSH_HOME } elseif ($I
 - 找不到 `pwsh`：安装 PowerShell 7，重新打开终端；或设置 `PHOTOCRAFT_DSH_PWSH`。
 - 端口被占用：关闭旧 PhotoCraft 桥接进程，或设置另一个 `PHOTOCRAFT_DSH_PORT`。测试脚本另提供 `-Port` 参数。
 - 桌面启动失败：查看 `state/app.stderr.log`。本版已使用安全渲染模式，但仍需要可用的桌面会话。
+- Mac 首次启动可能出现“Switched to CPU rendering”提示，选择 **Keep Using CPU** 即可继续。两个 Mac CI 的截图中均出现此提示，编辑、保存与截图调用仍通过；本版不声称验证 GPU 加速。
 - 路径拒绝：将图片放入 `workspace`；不要使用 `..` 越界访问。
 - 安装包校验失败：不要跳过校验；删除下载缓存里的损坏 ZIP 后重新下载。
 
