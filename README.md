@@ -29,7 +29,7 @@ dsh plugin --profile web add github:DASHAN-0079/dsh-photocraft#v0.2.0
 ### 2. 安装原生 PhotoCraft 运行时
 
 ```powershell
-$dshRoot = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+$dshRoot = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh' }
 & "$dshRoot/profiles/web/node_modules/dsh-photocraft/scripts/Install-PhotoCraft.ps1"
 ```
 
@@ -97,7 +97,7 @@ pwsh -NoProfile -File "${DSH_HOME:-$HOME/.dsh}/profiles/web/node_modules/dsh-pho
 运行完整集成检查（会创建合成测试图片并打开一个桌面测试文档）：
 
 ```powershell
-$install = if ($env:PHOTOCRAFT_DSH_HOME) { $env:PHOTOCRAFT_DSH_HOME } else { Join-Path $env:LOCALAPPDATA 'dsh-photocraft' }
+$install = if ($env:PHOTOCRAFT_DSH_HOME) { $env:PHOTOCRAFT_DSH_HOME } elseif ($IsWindows) { Join-Path $env:LOCALAPPDATA 'dsh-photocraft' } else { Join-Path $env:HOME 'Library/Application Support/dsh-photocraft' }
 & "$install/scripts/Test-PhotoCraftMcp.ps1" -InstallDir $install
 ```
 
@@ -144,4 +144,3 @@ npm pack --dry-run
 包由 YAML 配置和 PowerShell 脚本组成，不新增 JavaScript/TypeScript 界面。插件采用 MIT 许可证；PhotoCraft 原始便携包的许可证和资源声明随运行时保留。项目不重新分发上游二进制或品牌资产。
 
 [PhotoCraft](https://github.com/storytold/photocraft) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-

@@ -59,6 +59,19 @@ if (Test-Path -LiteralPath $runtime) {
         try {
             & /usr/bin/ditto (Join-Path $mount 'PhotoCraft.app') (Join-Path $extracted 'PhotoCraft.app')
             if ($LASTEXITCODE -ne 0) { throw 'App bundle copy failed.' }
+            # HFS DMGs can add Finder metadata that codesign rejects. Remove only
+            # those two non-code attributes, preserving quarantine and all other attributes.
+            $bundle = Join-Path $extracted 'PhotoCraft.app'
+            $entries = @($bundle) + @(Get-ChildItem -LiteralPath $bundle -Recurse -Force | ForEach-Object FullName)
+            foreach ($entry in $entries) {
+                foreach ($attribute in @('com.apple.FinderInfo','com.apple.ResourceFork')) {
+                    & /usr/bin/xattr -p $attribute $entry 2>$null | Out-Null
+                    if ($LASTEXITCODE -eq 0) {
+                        & /usr/bin/xattr -d $attribute $entry
+                        if ($LASTEXITCODE -ne 0) { throw "Cannot remove packaging metadata $attribute from $entry" }
+                    }
+                }
+            }
             & /usr/bin/codesign --verify --deep --strict (Join-Path $extracted 'PhotoCraft.app')
             if ($LASTEXITCODE -ne 0) { throw 'PhotoCraft.app signature verification failed.' }
             & /usr/bin/codesign --verify --strict (Join-Path $extracted $platform.Cli)
