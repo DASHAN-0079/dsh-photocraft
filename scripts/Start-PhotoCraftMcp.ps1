@@ -9,8 +9,10 @@ param(
     [switch]$SafeGpu
 )
 $ErrorActionPreference = 'Stop'
-$app = (Resolve-Path -LiteralPath (Join-Path $RuntimeDir 'photocraft.exe')).Path
-$cli = (Resolve-Path -LiteralPath (Join-Path $RuntimeDir 'photocraft-cli.exe')).Path
+. "$PSScriptRoot/Platform.ps1"
+$platform = Get-PhotoCraftPlatform
+$app = (Resolve-Path -LiteralPath (Join-Path $RuntimeDir $platform.App)).Path
+$cli = (Resolve-Path -LiteralPath (Join-Path $RuntimeDir $platform.Cli)).Path
 New-Item -ItemType Directory -Force -Path $WorkspaceDir, $StateDir | Out-Null
 $workspace = (Resolve-Path -LiteralPath $WorkspaceDir).Path
 $state = (Resolve-Path -LiteralPath $StateDir).Path
@@ -39,7 +41,7 @@ function Test-ControlReady {
 }
 
 # Different MCP clients and the DSH protocol probe may start concurrently.
-$mutex = [System.Threading.Mutex]::new($false, "Local\PhotoCraft-Dsh-$Port")
+$mutex = [System.Threading.Mutex]::new($false, "PhotoCraft-Dsh-$Port")
 $held = $false
 try {
     try { $held = $mutex.WaitOne([TimeSpan]::FromSeconds($StartupTimeoutSeconds)) }
@@ -49,9 +51,15 @@ try {
         $arguments = @('--control', "$Port", '--control-token-file', ('"' + $tokenFile + '"'),
             '--automation-read-root', ('"' + $workspace + '"'), '--automation-write-root', ('"' + $workspace + '"'))
         if ($SafeGpu) { $arguments += '--safe-gpu' }
-        $appProcess = Start-Process -FilePath $app -ArgumentList $arguments -WorkingDirectory (Split-Path $app) `
-            -WindowStyle Hidden -RedirectStandardOutput (Join-Path $state 'app.stdout.log') `
-            -RedirectStandardError (Join-Path $state 'app.stderr.log') -PassThru
+        $launch = @{FilePath=$app; ArgumentList=$arguments; WorkingDirectory=(Split-Path $app);
+            RedirectStandardOutput=(Join-Path $state 'app.stdout.log'); RedirectStandardError=(Join-Path $state 'app.stderr.log'); PassThru=$true}
+        if ($IsWindows) { $launch.WindowStyle = 'Hidden' }
+        else {
+            # Preserve the desktop after the MCP client exits on Unix.
+            $launch.FilePath = '/usr/bin/nohup'
+            $launch.ArgumentList = @('"' + $app + '"') + $arguments
+        }
+        $appProcess = Start-Process @launch
         $deadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
         while (-not (Test-ControlReady)) {
             if ($appProcess.HasExited) { throw "PhotoCraft exited with code $($appProcess.ExitCode). See $state/app.stderr.log" }

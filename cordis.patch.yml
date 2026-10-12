@@ -1,14 +1,16 @@
-# Native PhotoCraft runtime is installed explicitly by scripts/Install-PhotoCraft.ps1.
-# Paths are evaluated on the recipient's machine. No credentials belong here.
+# Native runtime installed explicitly by scripts/Install-PhotoCraft.ps1.
 - insert:
     - id: mcp-photocraft
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: photocraft
         transport: stdio
-        command: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/runtime/photocraft-cli.exe'
-        args: !!js "['mcp', '--automation-read-root', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace', '--automation-write-root', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace']"
-        cwd: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace'
+        command: !!js >-
+          (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/runtime/photocraft-cli' + (process.platform === 'win32' ? '.exe' : '')
+        args: !!js >-
+          ['mcp', '--automation-read-root', (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/workspace', '--automation-write-root', (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/workspace']
+        cwd: !!js >-
+          (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/workspace'
         toolCallTimeoutMs: 180000
         failOnStartupError: true
     - id: mcp-photocraft-ui
@@ -17,7 +19,9 @@
         serverName: photocraft_ui
         transport: stdio
         command: !!js process.env.PHOTOCRAFT_DSH_PWSH || 'pwsh'
-        args: !!js "['-NoProfile', '-NonInteractive', '-File', (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/scripts/Start-PhotoCraftMcp.ps1', '-Port', process.env.PHOTOCRAFT_DSH_PORT || '17878', '-SafeGpu']"
-        cwd: !!js (process.env.PHOTOCRAFT_DSH_HOME || process.env.LOCALAPPDATA + '/dsh-photocraft') + '/workspace'
+        args: !!js >-
+          ['-NoProfile', '-NonInteractive', '-File', (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/scripts/Start-PhotoCraftMcp.ps1', '-Port', process.env.PHOTOCRAFT_DSH_PORT || '17878', '-SafeGpu']
+        cwd: !!js >-
+          (process.env.PHOTOCRAFT_DSH_HOME || (process.platform === 'win32' ? process.env.LOCALAPPDATA + '/dsh-photocraft' : process.env.HOME + '/Library/Application Support/dsh-photocraft')) + '/workspace'
         toolCallTimeoutMs: 180000
         failOnStartupError: true

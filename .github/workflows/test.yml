@@ -3,8 +3,16 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  windows:
-    runs-on: windows-latest
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,3 +20,17 @@ jobs:
           node-version: '24'
       - run: npm test
       - run: npm pack --dry-run
+      - name: Install verified native runtime (path with spaces)
+        run: ./scripts/Install-PhotoCraft.ps1 -InstallDir "$env:RUNNER_TEMP/PhotoCraft integration"
+      - name: Verify repeated install preserves runtime
+        run: ./scripts/Install-PhotoCraft.ps1 -InstallDir "$env:RUNNER_TEMP/PhotoCraft integration"
+      - name: Exercise all MCP tools including desktop
+        run: ./scripts/Test-PhotoCraftMcp.ps1 -InstallDir "$env:RUNNER_TEMP/PhotoCraft integration"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/PhotoCraft integration/validation.json
+            ${{ runner.temp }}/PhotoCraft integration/workspace/*preview.png
+            ${{ runner.temp }}/PhotoCraft integration/state/*.log

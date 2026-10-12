@@ -2,6 +2,19 @@
 #Requires -Version 7.0
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+. "$PSScriptRoot/Platform.ps1"
+foreach ($system in @('windows','macos')) {
+    foreach ($architecture in $(if ($system -eq 'windows') {@('X64')} else {@('X64','Arm64')})) {
+        $platform = Get-PhotoCraftPlatform -System $system -Architecture $architecture
+        if ($platform.Hash -notmatch '^[a-f0-9]{64}$') { throw 'Missing archive pin' }
+        if ($system -eq 'macos' -and ($platform.Cli -ne 'photocraft-cli' -or $platform.CliHash -notmatch '^[a-f0-9]{64}$')) { throw 'Invalid Mac runtime definition' }
+    }
+}
+foreach ($pair in @(@('windows','Arm64'), @('linux','X64'))) {
+    $refused = $false
+    try { $null = Get-PhotoCraftPlatform -System $pair[0] -Architecture $pair[1] } catch { $refused = $true }
+    if (-not $refused) { throw 'Unsupported platform accepted' }
+}
 $manifest = Get-Content -LiteralPath "$root/package.json" -Raw | ConvertFrom-Json
 if ($manifest.name -ne 'dsh-photocraft' -or $manifest.dsh.bundle.patch -ne './cordis.patch.yml') { throw 'Invalid bundle manifest' }
 foreach ($file in Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1') {

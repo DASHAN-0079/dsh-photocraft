@@ -1,10 +1,13 @@
 # Exercise the installed MCP transports with synthetic images only.
 [CmdletBinding()]
 param(
-    [string]$InstallDir = $(if ($env:PHOTOCRAFT_DSH_HOME) { $env:PHOTOCRAFT_DSH_HOME } else { Join-Path $env:LOCALAPPDATA 'dsh-photocraft' }),
+    [string]$InstallDir,
     [ValidateRange(1024,65535)][int]$Port = 17878
 )
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/Platform.ps1"
+$platform = Get-PhotoCraftPlatform
+if (-not $InstallDir) { $InstallDir = Get-PhotoCraftHome }
 $install = (Resolve-Path -LiteralPath $InstallDir).Path
 $workspace = Join-Path $install 'workspace'
 $checks = [System.Collections.Generic.List[object]]::new()
@@ -65,7 +68,7 @@ function Save-Preview($Result, [string]$Path) {
     [System.IO.File]::WriteAllBytes($Path, $bytes)
 }
 
-$headless = Start-Mcp (Join-Path $install 'runtime/photocraft-cli.exe') @('mcp','--automation-read-root',$workspace,'--automation-write-root',$workspace)
+$headless = Start-Mcp (Join-Path "$install/runtime" $platform.Cli) @('mcp','--automation-read-root',$workspace,'--automation-write-root',$workspace)
 try {
     $tools = (Invoke-Rpc $headless 'tools/list' @{}).tools
     $commands = (Invoke-Tool $headless 'command_list').content[0].text | ConvertFrom-Json -Depth 100
