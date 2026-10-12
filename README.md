@@ -94,6 +94,8 @@ pwsh -NoProfile -File "${DSH_HOME:-$HOME/.dsh}/profiles/web/node_modules/dsh-pho
 
 ## 验证
 
+**v0.2.0 跨平台实测（2026-10-12）：** [同一次 GitHub Actions 运行](https://github.com/DASHAN-0079/dsh-photocraft/actions/runs/38253618887)中，Windows x64、macOS 15 Intel、macOS 15 Apple Silicon 均通过完整的 **105 项检查 / 21 个 MCP 工具**，包括桌面启动、画布绘制和截图；两个 Mac 的截图已人工查看。其他 macOS 版本尚未逐一验证。
+
 运行完整集成检查（会创建合成测试图片并打开一个桌面测试文档）：
 
 ```powershell
